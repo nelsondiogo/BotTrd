@@ -1,6 +1,0 @@
-flask
-ccxt
-pandas
-numpy
-python-dotenv
-gunicorn
