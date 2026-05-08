@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🤖 Crypto Futures Bot</title>
+<style>
+/* ═══════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:       #080d1a;
+  --surface:  #0f1629;
+  --border:   #1c2a45;
+  --accent:   #00d4ff;
+  --green:    #00e676;
+  --red:      #ff3d57;
+  --orange:   #ff9800;
+  --text:     #dde3f0;
+  --muted:    #6b7a99;
+}
+body{
+  font-family:'Segoe UI',system-ui,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+}
+
+/* ═══════════════════════════════════
+   HEADER
+═══════════════════════════════════ */
+header{
+  background:linear-gradient(135deg,#0f1629,#080d1a);
+  border-bottom:1px solid var(--border);
+  padding:14px 20px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  position:sticky;
+  top:0;
+  z-index:100;
+}
+header h1{font-size:1.1rem;color:var(--accent);font-weight:700}
+header .version{
+  margin-left:auto;
+  font-size:.72rem;
+  color:var(--muted);
+  background:#1c2a45;
+  padding:3px 10px;
+  border-radius:20px;
+}
+
+/* ═══════════════════════════════════
+   LAYOUT
+═══════════════════════════════════ */
+.page{
+  max-width:960px;
+  margin:0 auto;
+  padding:20px 14px 40px;
+  display:grid;
+  gap:16px;
+}
+
+/* ═══════════════════════════════════
+   CARD
+═══════════════════════════════════ */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:18px;
+}
+.card-title{
+  font-size:.78rem;
+  color:var(--accent);
+  text-transform:uppercase;
+  letter-spacing:1.2px;
+  font-weight:700;
+  margin-bottom:14px;
+  padding-bottom:10px;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+/* ═══════════════════════════════════
+   FORMULÁRIO
+═══════════════════════════════════ */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:580px){
+  .grid-2,.grid-3{grid-template-columns:1fr}
+}
+.full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:5px}
+label{
+  font-size:.72rem;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  font-weight:600;
+}
+input,select{
+  background:#07101f;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:10px 12px;
+  color:var(--text);
+  font-size:.9rem;
+  outline:none;
+  transition:border-color .2s,box-shadow .2s;
+  width:100%;
+}
+input:focus,select:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(0,212,255,.1);
+}
+input[type="password"]{letter-spacing:3px}
+select option{background:#0f1629}
+
+/* ═══════════════════════════════════
+   BOTÕES
+═══════════════════════════════════ */
+.btn-row{display:flex;gap:10px;margin-top:16px}
+.btn{
+  flex:1;
+  padding:13px;
+  border:none;
+  border-radius:10px;
+  font-size:.95rem;
+  font-weight:700;
+  cursor:pointer;
+  transition:all .2s;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+.btn:disabled{
+  opacity:.35;
+  cursor:not-allowed;
+  transform:none!important;
+}
+.btn-start{
+  background:linear-gradient(135deg,#00c853,#00897b);
+  color:#fff;
+}
+.btn-start:hover:not(:disabled){
+  transform:translateY(-2px);
+  box-shadow:0 6px 20px rgba(0,200,83,.3);
+}
+.btn-stop{
+  background:linear-gradient(135deg,#f44336,#b71c1c);
+  color:#fff;
+}
+.btn-stop:hover:not(:disabled){
+  transform:translateY(-2px);
+  box-shadow:0 6px 20px rgba(244,67,54,.3);
+}
+
+/* ═══════════════════════════════════
+   STATUS BAR
+═══════════════════════════════════ */
+.status-bar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background:#07101f;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px 14px;
+  margin-bottom:14px;
+}
+.dot{
+  width:10px;height:10px;
+  border-radius:50%;
+  background:#2a3a5a;
+  flex-shrink:0;
+}
+.dot.parado   {background:var(--red)}
+.dot.ativo    {background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 1s infinite}
+.dot.analisando{background:var(--orange);box-shadow:0 0 8px var(--orange);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+#status-text{font-size:.88rem;color:var(--text);flex:1}
+.signal-pill{
+  padding:4px 14px;
+  border-radius:20px;
+  font-size:.75rem;
+  font-weight:700;
+  background:#1c2a45;
+  color:var(--muted);
+  border:1px solid var(--border);
+}
+.signal-pill.LONG {background:#003322;color:var(--green);border-color:#00c853}
+.signal-pill.SHORT{background:#330011;color:var(--red);border-color:#f44336}
+
+/* ═══════════════════════════════════
+   MÉTRICAS
+═══════════════════════════════════ */
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:500px){.metrics{grid-template-columns:repeat(2,1fr)}}
+.metric{
+  background:#07101f;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px 12px;
+  text-align:center;
+}
+.metric .mlabel{
+  font-size:.68rem;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  margin-bottom:6px;
+}
+.metric .mvalue{
+  font-size:1.1rem;
+  font-weight:800;
+  color:var(--text);
+}
+.mvalue.accent{color:var(--accent)}
+.mvalue.green {color:var(--green)}
+.mvalue.red   {color:var(--red)}
+.mvalue.orange{color:var(--orange)}
+
+/* ═══════════════════════════════════
+   INDICADORES
+═══════════════════════════════════ */
+.indicators{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:500px){.indicators{grid-template-columns:repeat(2,1fr)}}
+.ind{
+  background:#07101f;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px;
+  text-align:center;
+}
+.ind .ilabel{
+  font-size:.68rem;
+  color:var(--muted);
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  margin-bottom:5px;
+}
+.ind .ivalue{
+  font-size:1rem;
+  font-weight:800;
+  color:var(--accent);
+}
+
+/* ═══════════════════════════════════
+   POSIÇÃO
+═══════════════════════════════════ */
+.pos-box{
+  background:#07101f;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px;
+}
+.pos-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+.pos-side{font-size:1.1rem;font-weight:800}
+.pos-side.long {color:var(--green)}
+.pos-side.short{color:var(--red)}
+.pos-pnl{font-size:1.1rem;font-weight:800}
+.pos-details{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  font-size:.82rem;
+  color:var(--muted);
+}
+.pos-details b{color:var(--text)}
+.no-pos{
+  color:var(--muted);
+  font-size:.88rem;
+  padding:8px 0;
+}
+
+/* ═══════════════════════════════════
+   LOGS
+═══════════════════════════════════ */
+#log-box{
+  background:#04080f;
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:12px 14px;
+  height:300px;
+  overflow-y:auto;
+  font-family:'Courier New',monospace;
+  font-size:.78rem;
+  scroll-behavior:smooth;
+}
+#log-box::-webkit-scrollbar{width:4px}
+#log-box::-webkit-scrollbar-thumb{background:#1c2a45;border-radius:4px}
+.log-line{
+  display:flex;
+  gap:10px;
+  padding:3px 0;
+  border-bottom:1px solid #0a1020;
+  line-height:1.4;
+}
+.log-time{color:#2a3a5a;min-width:58px;flex-shrink:0}
+.log-msg{color:#8899aa;flex:1;word-break:break-word}
+.log-msg.SUCCESS{color:var(--green)}
+.log-msg.WARNING{color:var(--orange)}
+.log-msg.ERROR  {color:var(--red)}
+.log-msg.INFO   {color:#8899aa}
+
+/* ═══════════════════════════════════
+   TOAST
+═══════════════════════════════════ */
+#toast{
+  position:fixed;
+  bottom:20px;right:20px;
+  padding:12px 20px;
+  border-radius:10px;
+  font-size:.88rem;
+  font-weight:700;
+  display:none;
+  z-index:999;
+  box-shadow:0 4px 20px rgba(0,0,0,.5);
+  animation:slideIn .3s ease;
+}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+#toast.success{background:#00c853;color:#fff}
+#toast.error  {background:#f44336;color:#fff}
+#toast.info   {background:#1565c0;color:#fff}
+
+/* ═══════════════════════════════════
+   DIVIDER
+═══════════════════════════════════ */
+.divider{
+  height:1px;
+  background:var(--border);
+  margin:14px 0;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <span style="font-size:1.4rem">🤖</span>
+  <h1>Crypto Futures Bot — Preservação de Lucro</h1>
+  <span class="version">v2.0.0</span>
+</header>
+
+<div class="page">
+
+  <!-- ═══ CONFIGURAÇÃO ═══ -->
+  <div class="card">
+    <div class="card-title">⚙️ Configuração</div>
+
+    <div class="grid-2">
+      <div class="field">
+        <label>Exchange</label>
+        <select id="exchange_id">
+          <option value="bybit">Bybit Linear</option>
+          <option value="binance">Binance Futures</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Modo</label>
+        <select id="testnet">
+          <option value="false">🔴 Real</option>
+          <option value="true">🧪 Testnet</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>API Key</label>
+        <input type="password" id="api_key" placeholder="Cole sua API Key"/>
+      </div>
+      <div class="field full">
+        <label>API Secret</label>
+        <input type="password" id="api_secret" placeholder="Cole seu API Secret"/>
+      </div>
+      <div class="field">
+        <label>Par (Symbol)</label>
+        <input type="text" id="symbol" value="BTC/USDT:USDT"/>
+      </div>
+      <div class="field">
+        <label>Timeframe</label>
+        <select id="timeframe">
+          <option value="1m">1 minuto</option>
+          <option value="5m" selected>5 minutos</option>
+          <option value="15m">15 minutos</option>
+          <option value="1h">1 hora</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="grid-3">
+      <div class="field">
+        <label>Alavancagem</label>
+        <input type="number" id="leverage" value="3" min="1" max="20"/>
+      </div>
+      <div class="field">
+        <label>Tamanho Posição (%)</label>
+        <input type="number" id="position_size_percent" value="1.0" step="0.1" min="0.1" max="20"/>
+      </div>
+      <div class="field">
+        <label>Cooldown (s)</label>
+        <input type="number" id="cooldown_seconds" value="30" min="5"/>
+      </div>
+      <div class="field">
+        <label>Stop Inicial (% capital)</label>
+        <input type="number" id="initial_stop_percent" value="0.5" step="0.1" min="0.1"/>
+      </div>
+      <div class="field">
+        <label>Stop por Lucro (%)</label>
+        <input type="number" id="profit_stop_percent" value="1.0" step="0.1" min="0.1"/>
+      </div>
+      <div class="field">
+        <label>Lucro Mín. Regra ($)</label>
+        <input type="number" id="min_profit_to_use_rule" value="5.0" step="0.5" min="1"/>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-start" id="btn-start" onclick="startBot()">
+        ▶ Iniciar Bot
+      </button>
+      <button class="btn btn-stop" id="btn-stop" onclick="stopBot()" disabled>
+        ⏹ Parar Bot
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STATUS ═══ -->
+  <div class="card">
+    <div class="card-title">📡 Status da Sessão</div>
+
+    <div class="status-bar">
+      <div class="dot parado" id="status-dot"></div>
+      <span id="status-text">Bot parado</span>
+      <span class="signal-pill" id="signal-pill">SEM SINAL</span>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="mlabel">Saldo Atual</div>
+        <div class="mvalue accent" id="m-balance">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Lucro Sessão</div>
+        <div class="mvalue" id="m-profit">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Capital Inicial</div>
+        <div class="mvalue" id="m-initial">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Total Trades</div>
+        <div class="mvalue" id="m-trades">0</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Ganhos / Perdas</div>
+        <div class="mvalue" id="m-wl">0W / 0L</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Taxas Pagas</div>
+        <div class="mvalue orange" id="m-fees">$0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INDICADORES ═══ -->
+  <div class="card">
+    <div class="card-title">📈 Indicadores Técnicos</div>
+    <div class="indicators">
+      <div class="ind">
+        <div class="ilabel">Preço</div>
+        <div class="ivalue" id="i-price">---</div>
+      </div>
+      <div class="ind">
+        <div class="ilabel">EMA 9</div>
+        <div class="ivalue" id="i-ema9">---</div>
+      </div>
+      <div class="ind">
+        <div class="ilabel">EMA 21</div>
+        <div class="ivalue" id="i-ema21">---</div>
+      </div>
+      <div class="ind">
+        <div class="ilabel">RSI 14</div>
+        <div class="ivalue" id="i-rsi">---</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ POSIÇÃO ═══ -->
+  <div class="card">
+    <div class="card-title">📊 Posição Atual</div>
+    <div id="pos-content">
+      <p class="no-pos">Nenhuma posição aberta no momento.</p>
+    </div>
+  </div>
+
+  <!-- ═══ LOGS ═══ -->
+  <div class="card">
+    <div class="card-title">
+      📋 Logs em Tempo Real
+      <button onclick="clearLogs()"
+        style="margin-left:auto;background:#1c2a45;border:none;
+               color:var(--muted);padding:3px 10px;border-radius:6px;
+               cursor:pointer;font-size:.72rem;">
+        Limpar
+      </button>
+    </div>
+    <div id="log-box"></div>
+  </div>
+
+</div><!-- /page -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════
+// CONTROLE DO BOT
+// ═══════════════════════════════════════════════════
+function getConfig() {
+  return {
+    api_key:                document.getElementById("api_key").value.trim(),
+    api_secret:             document.getElementById("api_secret").value.trim(),
+    exchange_id:            document.getElementById("exchange_id").value,
+    testnet:                document.getElementById("testnet").value,
+    symbol:                 document.getElementById("symbol").value.trim(),
+    timeframe:              document.getElementById("timeframe").value,
+    leverage:               document.getElementById("leverage").value,
+    position_size_percent:  document.getElementById("position_size_percent").value,
+    initial_stop_percent:   document.getElementById("initial_stop_percent").value,
+    profit_stop_percent:    document.getElementById("profit_stop_percent").value,
+    min_profit_to_use_rule: document.getElementById("min_profit_to_use_rule").value,
+    cooldown_seconds:       document.getElementById("cooldown_seconds").value,
+    loop_interval:          10,
+  };
+}
+
+async function startBot() {
+  const cfg = getConfig();
+  if (!cfg.api_key || !cfg.api_secret) {
+    showToast("Preencha a API Key e o API Secret!", "error"); return;
+  }
+  try {
+    const res  = await fetch("/api/start", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(cfg),
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast("✅ Bot iniciado!", "success");
+      document.getElementById("btn-start").disabled = true;
+      document.getElementById("btn-stop").disabled  = false;
+    } else {
+      showToast("❌ " + data.error, "error");
+    }
+  } catch(e) {
+    showToast("Erro de conexão com o servidor", "error");
+  }
+}
+
+async function stopBot() {
+  try {
+    const res  = await fetch("/api/stop", {method:"POST"});
+    const data = await res.json();
+    if (data.success) {
+      showToast("⛔ Bot encerrado.", "info");
+      document.getElementById("btn-start").disabled = false;
+      document.getElementById("btn-stop").disabled  = true;
+    }
+  } catch(e) {
+    showToast("Erro ao parar o bot", "error");
+  }
+}
+
+function clearLogs() {
+  document.getElementById("log-box").innerHTML = "";
+}
+
+// ═══════════════════════════════════════════════════
+// ATUALIZAÇÃO DO DASHBOARD
+// ═══════════════════════════════════════════════════
+async function updateDashboard() {
+  try {
+    const res  = await fetch("/api/status");
+    const data = await res.json();
+    renderStatus(data);
+    renderMetrics(data.session);
+    renderIndicators(data.indicators);
+    renderPosition(data.position);
+    renderLogs(data.logs);
+  } catch(e) { /* silencioso */ }
+}
+
+function renderStatus(data) {
+  const dot   = document.getElementById("status-dot");
+  const txt   = document.getElementById("status-text");
+  const pill  = document.getElementById("signal-pill");
+  const bStart= document.getElementById("btn-start");
+  const bStop = document.getElementById("btn-stop");
+
+  txt.textContent = "Status: " + (data.status || "parado");
+
+  // Dot color
+  dot.className = "dot";
+  const s = (data.status || "").toLowerCase();
+  if (!data.running)             dot.classList.add("parado");
+  else if (s.includes("posição"))dot.classList.add("ativo");
+  else                           dot.classList.add("analisando");
+
+  bStart.disabled = !!data.running;
+  bStop.disabled  = !data.running;
+
+  // Signal pill
+  const sig = data.signal || "---";
+  pill.textContent = sig === "---" ? "SEM SINAL" : sig;
+  pill.className   = "signal-pill";
+  if (sig === "LONG")  pill.classList.add("LONG");
+  if (sig === "SHORT") pill.classList.add("SHORT");
+}
+
+function renderMetrics(sess) {
+  if (!sess) return;
+  const profit = sess.accumulated_profit || 0;
+
+  setText("m-balance", "$" + fmt2(sess.current_balance));
+  setText("m-initial", "$" + fmt2(sess.initial_balance));
+  setText("m-trades",  sess.total_trades || 0);
+  setText("m-wl",
+    (sess.winning_trades||0) + "W / " + (sess.losing_trades||0) + "L"
+  );
+  setText("m-fees", "$" + fmt4(sess.total_fees));
+
+  const pEl = document.getElementById("m-profit");
+  pEl.textContent = (profit >= 0 ? "+" : "") + "$" + fmt4(profit);
+  pEl.className   = "mvalue " + (profit > 0 ? "green" : profit < 0 ? "red" : "");
+}
+
+function renderIndicators(ind) {
+  if (!ind) return;
+  setText("i-price", ind.price   || "---");
+  setText("i-ema9",  ind.ema_fast|| "---");
+  setText("i-ema21", ind.ema_slow|| "---");
+
+  const rsiEl = document.getElementById("i-rsi");
+  const rsi   = parseFloat(ind.rsi) || 0;
+  rsiEl.textContent = rsi || "---";
+  rsiEl.style.color =
+    rsi > 70 ? "var(--red)" :
+    rsi < 30 ? "var(--green)" : "var(--accent)";
+}
+
+function renderPosition(pos) {
+  const el = document.getElementById("pos-content");
+  if (!pos) {
+    el.innerHTML = '<p class="no-pos">Nenhuma posição aberta no momento.</p>';
+    return;
+  }
+  const pnl     = pos.unrealized_pnl || 0;
+  const pnlClr  = pnl >= 0 ? "var(--green)" : "var(--red)";
+  const pnlSign = pnl >= 0 ? "+" : "";
+  const sideStr = (pos.side || "").toLowerCase();
+
+  el.innerHTML = `
+    <div class="pos-box">
+      <div class="pos-header">
+        <span class="pos-side ${sideStr}">
+          ${sideStr === "long" ? "▲ LONG" : "▼ SHORT"}
+        </span>
+        <span class="pos-pnl" style="color:${pnlClr}">
+          ${pnlSign}$${fmt4(pnl)}
+        </span>
+      </div>
+      <div class="pos-details">
+        <span>Entrada: <b>${fmt4(pos.entry_price)}</b></span>
+        <span>Tamanho: <b>${pos.size}</b></span>
+        <span>Nocional: <b>$${fmt2(pos.notional)}</b></span>
+      </div>
+    </div>`;
+}
+
+function renderLogs(logs) {
+  if (!logs || !logs.length) return;
+  const box    = document.getElementById("log-box");
+  const atBot  = box.scrollHeight - box.clientHeight <= box.scrollTop + 40;
+
+  box.innerHTML = logs.map(l => `
+    <div class="log-line">
+      <span class="log-time">${l.time}</span>
+      <span class="log-msg ${l.level}">${esc(l.message)}</span>
+    </div>`).join("");
+
+  if (atBot) box.scrollTop = box.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════
+// UTILITÁRIOS
+// ═══════════════════════════════════════════════════
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+function fmt2(v)  { return parseFloat(v||0).toFixed(2) }
+function fmt4(v)  { return parseFloat(v||0).toFixed(4) }
+function esc(s)   {
+  return String(s)
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;");
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className   = type;
+  t.style.display = "block";
+  setTimeout(() => t.style.display = "none", 3500);
+}
+
+// ═══════════════════════════════════════════════════
+// POLLING
+// ═══════════════════════════════════════════════════
+updateDashboard();
+setInterval(updateDashboard, 3000);
+</script>
+</body>
+</html>
