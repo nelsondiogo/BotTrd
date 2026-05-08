@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🤖 Crypto Futures Bot</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0a0e1a;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #1a1f35, #0d1226);
+      border-bottom: 1px solid #2a3050;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 {
+      font-size: 1.3rem;
+      color: #00d4ff;
+    }
+    header span { font-size: 1.5rem; }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px;
+      display: grid;
+      gap: 20px;
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: #111827;
+      border: 1px solid #1e2d45;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .card h2 {
+      font-size: 0.95rem;
+      color: #00d4ff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #1e2d45;
+    }
+
+    /* ── GRID FORMS ── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 600px) {
+      .form-grid { grid-template-columns: 1fr; }
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 0.78rem;
+      color: #8892a4;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    input, select {
+      background: #0d1226;
+      border: 1px solid #2a3050;
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: #e0e0e0;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: #00d4ff;
+    }
+    input[type="password"] { letter-spacing: 2px; }
+
+    /* ── BOTÕES ── */
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    #btn-start {
+      background: linear-gradient(135deg, #00c853, #00897b);
+      color: #fff;
+    }
+    #btn-start:hover { opacity: 0.9; transform: translateY(-1px); }
+    #btn-start:disabled { background: #2a3050; color: #555; cursor: not-allowed; transform: none; }
+
+    #btn-stop {
+      background: linear-gradient(135deg, #f44336, #c62828);
+      color: #fff;
+    }
+    #btn-stop:hover { opacity: 0.9; transform: translateY(-1px); }
+    #btn-stop:disabled { background: #2a3050; color: #555; cursor: not-allowed; transform: none; }
+
+    /* ── STATUS BADGE ── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #0d1226;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #555;
+    }
+    .dot.running { background: #00c853; box-shadow: 0 0 8px #00c853; animation: pulse 1s infinite; }
+    .dot.stopped { background: #f44336; }
+    .dot.analyzing { background: #ff9800; box-shadow: 0 0 8px #ff9800; animation: pulse 1.5s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    #status-text { font-size: 0.9rem; color: #aaa; }
+    #signal-badge {
+      margin-left: auto;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: #1e2d45;
+      color: #aaa;
+    }
+    #signal-badge.long  { background: #003d1a; color: #00c853; }
+    #signal-badge.short { background: #3d0000; color: #f44336; }
+
+    /* ── MÉTRICAS ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      background: #0d1226;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .metric .label {
+      font-size: 0.72rem;
+      color: #8892a4;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .metric .value {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #e0e0e0;
+    }
+    .metric .value.green { color: #00c853; }
+    .metric .value.red   { color: #f44336; }
+    .metric .value.blue  { color: #00d4ff; }
+
+    /* ── INDICADORES ── */
+    .ind-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    @media (max-width: 600px) {
+      .ind-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .ind-item {
+      background: #0d1226;
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+    }
+    .ind-item .lbl {
+      font-size: 0.7rem;
+      color: #8892a4;
+      text-transform: uppercase;
+    }
+    .ind-item .val {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #00d4ff;
+      margin-top: 4px;
+    }
+
+    /* ── POSIÇÃO ── */
+    .position-box {
+      background: #0d1226;
+      border-radius: 8px;
+      padding: 14px;
+      display: none;
+    }
+    .position-box.visible { display: block; }
+    .position-box .pos-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .pos-side {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .pos-side.long  { color: #00c853; }
+    .pos-side.short { color: #f44336; }
+    .pos-details {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      font-size: 0.85rem;
+      color: #8892a4;
+    }
+    .pos-details span b { color: #e0e0e0; }
+
+    /* ── LOGS ── */
+    #log-container {
+      background: #070c1a;
+      border-radius: 8px;
+      padding: 14px;
+      height: 280px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+    }
+    .log-line {
+      padding: 3px 0;
+      border-bottom: 1px solid #0d1226;
+      display: flex;
+      gap: 10px;
+    }
+    .log-time  { color: #444; min-width: 60px; }
+    .log-msg   { color: #ccc; }
+    .log-msg.SUCCESS { color: #00c853; }
+    .log-msg.WARNING { color: #ff9800; }
+    .log-msg.ERROR   { color: #f44336; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: none;
+      z-index: 999;
+    }
+    #toast.success { background: #00c853; color: #fff; }
+    #toast.error   { background: #f44336; color: #fff; }
+  </style>
+</head>
+<body>
+
+<header>
+  <span>🤖</span>
+  <h1>Crypto Futures Bot — Preservação de Lucro</h1>
+</header>
+
+<div class="container">
+
+  <!-- ── CONFIGURAÇÃO ── -->
+  <div class="card">
+    <h2>⚙️ Configuração</h2>
+    <div class="form-grid">
+
+      <div class="form-group">
+        <label>Exchange</label>
+        <select id="exchange_id">
+          <option value="binance">Binance Futures</option>
+          <option value="bybit">Bybit Linear</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Modo</label>
+        <select id="testnet">
+          <option value="true">🧪 Testnet (Seguro)</option>
+          <option value="false">🔴 Real (Cuidado!)</option>
+        </select>
+      </div>
+
+      <div class="form-group full">
+        <label>API Key</label>
+        <input type="password" id="api_key" placeholder="Cole sua API Key aqui"/>
+      </div>
+
+      <div class="form-group full">
+        <label>API Secret</label>
+        <input type="password" id="api_secret" placeholder="Cole seu API Secret aqui"/>
+      </div>
+
+      <div class="form-group">
+        <label>Par (Symbol)</label>
+        <input type="text" id="symbol" value="BTC/USDT:USDT"/>
+      </div>
+
+      <div class="form-group">
+        <label>Timeframe</label>
+        <select id="timeframe">
+          <option value="1m">1 minuto</option>
+          <option value="5m" selected>5 minutos</option>
+          <option value="15m">15 minutos</option>
+          <option value="1h">1 hora</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Alavancagem</label>
+        <input type="number" id="leverage" value="3" min="1" max="20"/>
+      </div>
+
+      <div class="form-group">
+        <label>Tamanho Posição (%)</label>
+        <input type="number" id="position_size_percent" value="1.0" step="0.1" min="0.1" max="10"/>
+      </div>
+
+      <div class="form-group">
+        <label>Stop Inicial (% capital)</label>
+        <input type="number" id="initial_stop_percent" value="0.5" step="0.1"/>
+      </div>
+
+      <div class="form-group">
+        <label>Stop por Lucro (%)</label>
+        <input type="number" id="profit_stop_percent" value="1.0" step="0.1"/>
+      </div>
+
+      <div class="form-group">
+        <label>Lucro Mín. Para Regra ($)</label>
+        <input type="number" id="min_profit_to_use_rule" value="5.0" step="0.5"/>
+      </div>
+
+      <div class="form-group">
+        <label>Cooldown (segundos)</label>
+        <input type="number" id="cooldown_seconds" value="30" min="5"/>
+      </div>
+
+    </div>
+
+    <div class="btn-group" style="margin-top:16px;">
+      <button id="btn-start" onclick="startBot()">▶ Iniciar Bot</button>
+      <button id="btn-stop"  onclick="stopBot()" disabled>⏹ Parar Bot</button>
+    </div>
+  </div>
+
+  <!-- ── STATUS ── -->
+  <div class="card">
+    <h2>📡 Status</h2>
+
+    <div class="status-bar">
+      <div class="dot stopped" id="status-dot"></div>
+      <span id="status-text">Bot parado</span>
+      <span id="signal-badge">SEM SINAL</span>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric">
+        <div class="label">Saldo Atual</div>
+        <div class="value blue" id="m-balance">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="label">Lucro Sessão</div>
+        <div class="value" id="m-profit">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="label">Total Trades</div>
+        <div class="value" id="m-trades">0</div>
+      </div>
+      <div class="metric">
+        <div class="label">Ganhos / Perdas</div>
+        <div class="value" id="m-wl">0W / 0L</div>
+      </div>
+      <div class="metric">
+        <div class="label">Taxas Pagas</div>
+        <div class="value red" id="m-fees">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="label">Capital Inicial</div>
+        <div class="value" id="m-initial">$0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── INDICADORES ── -->
+  <div class="card">
+    <h2>📈 Indicadores Técnicos</h2>
+    <div class="ind-grid">
+      <div class="ind-item">
+        <div class="lbl">Preço</div>
+        <div class="val" id="i-price">---</div>
+      </div>
+      <div class="ind-item">
+        <div class="lbl">EMA 9</div>
+        <div class="val" id="i-ema-fast">---</div>
+      </div>
+      <div class="ind-item">
+        <div class="lbl">EMA 21</div>
+        <div class="val" id="i-ema-slow">---</div>
+      </div>
+      <div class="ind-item">
+        <div class="lbl">RSI 14</div>
+        <div class="val" id="i-rsi">---</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── POSIÇÃO ABERTA ── -->
+  <div class="card">
+    <h2>📊 Posição Atual</h2>
+    <div class="position-box" id="position-box">
+      <div class="pos-header">
+        <span class="pos-side" id="pos-side">LONG</span>
+        <span id="pos-pnl" style="font-weight:700;">$0.00</span>
+      </div>
+      <div class="pos-details">
+        <span>Entrada: <b id="pos-entry">0.00</b></span>
+        <span>Tamanho: <b id="pos-size">0</b></span>
+        <span>Nocional: <b id="pos-notional">$0.00</b></span>
+      </div>
+    </div>
+    <div id="no-position" style="color:#555; font-size:0.9rem; padding:12px 0;">
+      Nenhuma posição aberta no momento.
+    </div>
+  </div>
+
+  <!-- ── LOGS ── -->
+  <div class="card">
+    <h2>📋 Logs em Tempo Real</h2>
+    <div id="log-container"></div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+  // ── CONTROLE DO BOT ──────────────────────────────
+  async function startBot() {
+    const config = {
+      api_key:                document.getElementById("api_key").value.trim(),
+      api_secret:             document.getElementById("api_secret").value.trim(),
+      exchange_id:            document.getElementById("exchange_id").value,
+      testnet:                document.getElementById("testnet").value === "true",
+      symbol:                 document.getElementById("symbol").value.trim(),
+      timeframe:              document.getElementById("timeframe").value,
+      leverage:               document.getElementById("leverage").value,
+      position_size_percent:  document.getElementById("position_size_percent").value,
+      initial_stop_percent:   document.getElementById("initial_stop_percent").value,
+      profit_stop_percent:    document.getElementById("profit_stop_percent").value,
+      min_profit_to_use_rule: document.getElementById("min_profit_to_use_rule").value,
+      cooldown_seconds:       document.getElementById("cooldown_seconds").value,
+      loop_interval:          10,
+    };
+
+    if (!config.api_key || !config.api_secret) {
+      showToast("Preencha a API Key e o API Secret!", "error");
+      return;
+    }
+
+    try {
+      const res  = await fetch("/api/start", {
+        method:  "POST",
+        headers: {"Content-Type": "application/json"},
+        body:    JSON.stringify(config),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        showToast("✅ Bot iniciado com sucesso!", "success");
+        document.getElementById("btn-start").disabled = true;
+        document.getElementById("btn-stop").disabled  = false;
+      } else {
+        showToast("❌ " + data.error, "error");
+      }
+    } catch (e) {
+      showToast("Erro de conexão com o servidor", "error");
+    }
+  }
+
+  async function stopBot() {
+    try {
+      const res  = await fetch("/api/stop", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        showToast("⛔ Bot sendo encerrado...", "success");
+        document.getElementById("btn-start").disabled = false;
+        document.getElementById("btn-stop").disabled  = true;
+      }
+    } catch (e) {
+      showToast("Erro ao parar o bot", "error");
+    }
+  }
+
+  // ── ATUALIZAÇÃO DO DASHBOARD ─────────────────────
+  async function updateDashboard() {
+    try {
+      const res  = await fetch("/api/status");
+      const data = await res.json();
+
+      updateStatus(data);
+      updateMetrics(data.session);
+      updateIndicators(data.indicators);
+      updatePosition(data.position);
+      updateLogs(data.logs);
+
+    } catch (e) {
+      console.error("Erro ao atualizar dashboard:", e);
+    }
+  }
+
+  function updateStatus(data) {
+    const dot    = document.getElementById("status-dot");
+    const text   = document.getElementById("status-text");
+    const badge  = document.getElementById("signal-badge");
+    const start  = document.getElementById("btn-start");
+    const stop   = document.getElementById("btn-stop");
+
+    text.textContent = "Status: " + data.status;
+
+    dot.className = "dot";
+    if (data.running && data.status === "em posição") {
+      dot.classList.add("running");
+    } else if (data.running) {
+      dot.classList.add("analyzing");
+    } else {
+      dot.classList.add("stopped");
+    }
+
+    start.disabled = data.running;
+    stop.disabled  = !data.running;
+
+    // Signal badge
+    const sig = data.signal || "---";
+    badge.textContent = sig;
+    badge.className   = "";
+    if (sig === "LONG")  badge.classList.add("long");
+    if (sig === "SHORT") badge.classList.add("short");
+  }
+
+  function updateMetrics(sess) {
+    const profit = sess.accumulated_profit || 0;
+    const pEl    = document.getElementById("m-profit");
+
+    document.getElementById("m-balance").textContent =
+      "$" + (sess.current_balance || 0).toFixed(2);
+
+    pEl.textContent = (profit >= 0 ? "+" : "") + "$" + profit.toFixed(4);
+    pEl.className   = "value " + (profit >= 0 ? "green" : "red");
+
+    document.getElementById("m-trades").textContent  = sess.total_trades || 0;
+    document.getElementById("m-wl").textContent =
+      (sess.winning_trades || 0) + "W / " + (sess.losing_trades || 0) + "L";
+    document.getElementById("m-fees").textContent    =
+      "$" + (sess.total_fees || 0).toFixed(4);
+    document.getElementById("m-initial").textContent =
+      "$" + (sess.initial_balance || 0).toFixed(2);
+  }
+
+  function updateIndicators(ind) {
+    document.getElementById("i-price").textContent    = ind.price    || "---";
+    document.getElementById("i-ema-fast").textContent = ind.ema_fast || "---";
+    document.getElementById("i-ema-slow").textContent = ind.ema_slow || "---";
+
+    const rsiEl = document.getElementById("i-rsi");
+    const rsi   = ind.rsi || 0;
+    rsiEl.textContent = rsi || "---";
+    rsiEl.style.color = rsi > 70 ? "#f44336" : rsi < 30 ? "#00c853" : "#00d4ff";
+  }
+
+  function updatePosition(pos) {
+    const box    = document.getElementById("position-box");
+    const noPos  = document.getElementById("no-position");
+
+    if (!pos) {
+      box.classList.remove("visible");
+      noPos.style.display = "block";
+      return;
+    }
+
+    box.classList.add("visible");
+    noPos.style.display = "none";
+
+    const sideEl = document.getElementById("pos-side");
+    const pnlEl  = document.getElementById("pos-pnl");
+
+    sideEl.textContent = pos.side.toUpperCase();
+    sideEl.className   = "pos-side " + pos.side;
+
+    const pnl = pos.unrealized_pnl || 0;
+    pnlEl.textContent = (pnl >= 0 ? "+" : "") + "$" + pnl.toFixed(4);
+    pnlEl.style.color = pnl >= 0 ? "#00c853" : "#f44336";
+
+    document.getElementById("pos-entry").textContent    = pos.entry_price?.toFixed(4) || "0";
+    document.getElementById("pos-size").textContent     = pos.size || "0";
+    document.getElementById("pos-notional").textContent = "$" + (pos.notional || 0).toFixed(2);
+  }
+
+  function updateLogs(logs) {
+    const container = document.getElementById("log-container");
+    const isBottom  =
+      container.scrollHeight - container.clientHeight <= container.scrollTop + 30;
+
+    container.innerHTML = logs.map(log => `
+      <div class="log-line">
+        <span class="log-time">${log.time}</span>
+        <span class="log-msg ${log.level}">${escHtml(log.message)}</span>
+      </div>
+    `).join("");
+
+    if (isBottom) container.scrollTop = container.scrollHeight;
+  }
+
+  function escHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  // ── TOAST ────────────────────────────────────────
+  function showToast(msg, type) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className   = type;
+    t.style.display = "block";
+    setTimeout(() => { t.style.display = "none"; }, 3500);
+  }
+
+  // ── INICIA POLLING ───────────────────────────────
+  updateDashboard();
+  setInterval(updateDashboard, 3000);
+</script>
+
+</body>
+</html>
