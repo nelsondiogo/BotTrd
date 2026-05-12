@@ -1,0 +1,7 @@
+*.pyc
+__pycache__/
+.git/
+.gitignore
+README.md
+ANALISE_*.md
+*.md
