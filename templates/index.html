@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>nd-bot HFT v9.0</title>
+<style>
+  :root{--bg:#07090f;--surface:#12141c;--elevated:#1a1d28;--border:#1f2230;--accent:#00d084;--danger:#ff4757;--gold:#ffd600;--text:#f0f2f5;--muted:#555b75;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);}
+  #app{max-width:480px;margin:0 auto;height:100%;display:flex;flex-direction:column;position:relative;}
+  .header-premium{display:flex;justify-content:space-between;align-items:center;padding:14px 14px 8px;gap:8px;}
+  .balance-cards{display:flex;gap:8px;flex:1;min-width:0;}
+  .bal-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:8px 10px;flex:1;min-width:0;text-align:center;}
+  .bal-card .lbl{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;white-space:nowrap;}
+  .bal-card .val{font-size:.82rem;font-weight:800;color:var(--accent);margin-top:2px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .brand-right{font-size:.8rem;font-weight:800;letter-spacing:-.2px;color:var(--text);text-shadow:0 0 10px rgba(0,208,132,0.2);white-space:nowrap;}
+  .brand-right span{color:var(--accent);}
+  main{flex:1;overflow-y:auto;padding:0 12px 80px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:14px;margin-bottom:10px;position:relative;overflow:hidden;}
+  .card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+  .card.up::before{background:var(--accent);}.card.down::before{background:var(--danger);}.card.neutral::before{background:var(--muted);}
+  .label{font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:700;}
+  .value{font-size:1.25rem;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums;}
+  .positive{color:var(--accent);}.negative{color:var(--danger);}
+  .hero{background:linear-gradient(145deg,#11131c 0%,#1a1d28 100%);border-color:rgba(0,208,132,0.06);}
+  .hero .pair{font-size:.95rem;font-weight:700;margin-bottom:8px;display:flex;justify-content:space-between;}
+  .hero .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .hero .stat-val{font-size:1rem;font-weight:700;font-variant-numeric:tabular-nums;}
+  .pair-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
+  .pair-item:last-child{border:none;}
+  .pair-info{flex:1;min-width:0;}
+  .pair-name{font-weight:700;font-size:.85rem;}
+  .pair-meta{font-size:.72rem;color:var(--muted);font-variant-numeric:tabular-nums;}
+  .pair-score{font-size:.78rem;font-weight:700;min-width:56px;text-align:right;}
+  .pair-side{font-size:.65rem;padding:2px 6px;border-radius:4px;font-weight:700;margin-right:6px;}
+  .side-long{background:rgba(0,208,132,0.15);color:var(--accent);}
+  .side-short{background:rgba(255,71,87,0.15);color:var(--danger);}
+  .form-group{margin-bottom:14px;}
+  label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:6px;font-weight:600;}
+  input,select{width:100%;background:#07090f;border:1px solid var(--border);color:var(--text);padding:12px;border-radius:10px;font-size:.95rem;}
+  input:focus,select:focus{outline:none;border-color:var(--accent);}
+  .btn{width:100%;padding:14px;border:none;border-radius:12px;font-weight:800;font-size:.95rem;cursor:pointer;}
+  .btn-save{background:var(--accent);color:#000;}
+  .btn-validate{background:var(--elevated);color:var(--text);border:1px solid var(--border);margin-top:8px;}
+  .btn-action{width:100%;padding:14px;border:none;border-radius:14px;font-weight:900;font-size:1rem;cursor:pointer;margin-top:10px;transition:all .2s;}
+  .btn-action.start{background:var(--accent);color:#000;box-shadow:0 4px 20px rgba(0,208,132,0.22);}
+  .btn-action.stop{background:var(--danger);color:#fff;box-shadow:0 4px 20px rgba(255,71,87,0.22);}
+  .btn-action:disabled{opacity:.6;transform:scale(.98);}
+  .logs{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px;height:200px;overflow-y:auto;font-family:'SF Mono',monospace;font-size:.72rem;line-height:1.5;color:#6b7280;}
+  .logs div{padding:2px 0;}
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:60px;background:rgba(7,9,15,.93);backdrop-filter:blur(16px);border-top:1px solid var(--border);display:flex;justify-content:space-around;align-items:center;z-index:40;padding-bottom:env(safe-area-inset-bottom);}
+  .nav-btn{background:none;border:none;color:var(--muted);font-size:.58rem;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;width:48px;padding:4px 0;}
+  .nav-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+  .nav-btn.active{color:var(--accent);}
+  .hidden{display:none !important;}
+  .badge{font-size:.6rem;padding:2px 6px;border-radius:4px;background:var(--elevated);color:var(--muted);font-weight:700;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;margin-right:6px;vertical-align:middle;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .latency-good{color:var(--accent);}.latency-warn{color:var(--gold);}.latency-bad{color:var(--danger);}
+  .mini-stat{display:flex;justify-content:space-between;font-size:.72rem;color:var(--muted);margin-top:4px;}
+</style>
+<base target="_blank">
+</head>
+<body>
+<div id="app">
+  <div class="header-premium">
+    <div class="balance-cards">
+      <div class="bal-card"><div class="lbl">Inicial</div><div class="val" id="hdrInitial">-</div></div>
+      <div class="bal-card"><div class="lbl">Atual</div><div class="val" id="hdrCurrent">-</div></div>
+    </div>
+    <div class="brand-right"><span>nd</span>-bot <span style="font-size:.6rem;color:var(--muted);">v9.0 HFT</span></div>
+  </div>
+
+  <main>
+    <section id="view-dashboard">
+      <div id="heroCard" class="card hero hidden">
+        <div class="pair"><span id="hSymbol">-</span><span class="badge" id="hSide">-</span></div>
+        <div class="stats">
+          <div><div class="label">PnL N.Realiz.</div><div class="stat-val" id="hUnreal">-</div></div>
+          <div><div class="label">Preco</div><div class="stat-val" id="hPrice">-</div></div>
+          <div><div class="label">Entrada</div><div class="stat-val" id="hEntry" style="color:var(--gold);">-</div></div>
+          <div><div class="label">Peak / Lock</div><div class="stat-val" id="hPeak">-</div></div>
+        </div>
+        <div class="mini-stat">
+          <span id="hLeverage">-</span>
+          <span id="hLiq">-</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="card neutral"><div class="label">Status</div><div class="value" id="txtStatus">PARADO</div></div>
+        <div class="card neutral"><div class="label">PnL Realizado</div><div class="value" id="txtReal">-</div></div>
+        <div class="card neutral"><div class="label">Ultimo Sinal</div><div class="value" style="font-size:1.05rem" id="txtSignalDash">-</div></div>
+        <div class="card neutral"><div class="label">Latencia Scan</div><div class="value" style="font-size:1.05rem" id="txtLatency">-</div></div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="label" style="margin:0 0 8px 4px;">Logs</div>
+        <div class="logs" id="logBox"></div>
+      </div>
+    </section>
+
+    <section id="view-market" class="hidden">
+      <div class="card neutral">
+        <div class="label" style="margin-bottom:12px;">Pares (<span id="pairCount">-</span>) | Scan: <span id="marketScan">-</span> | <span id="marketLatency">-</span></div>
+        <div id="pairList"><div class="pair-item"><span class="pair-meta">Aguardando scan...</span></div></div>
+      </div>
+    </section>
+
+    <section id="view-chart" class="hidden">
+      <div class="card neutral" style="padding:12px;">
+        <div class="label" style="margin-bottom:10px;">Grafico</div>
+        <div style="height:260px;border-radius:14px;overflow:hidden;border:1px solid var(--border);background:#000;">
+          <iframe id="tvFrame" src="https://www.tradingview.com/widgetembed/?frameElementId=tvFrame&symbol=BYBIT:BTCUSDT.P&interval=15&theme=dark&style=1&locale=pt&hide_top_toolbar=false&hide_legend=false&allow_symbol_change=true&save_image=false&details=false&studies=[]" style="width:100%;height:100%;border:none;"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-history" class="hidden">
+      <div class="card neutral" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div><div class="label">Lucro Total</div><div class="value" id="histTotal">-</div></div>
+          <div style="text-align:right;"><div class="label">Win Rate</div><div class="value" id="histWinRate">-</div></div>
+        </div>
+      </div>
+      <div class="card neutral">
+        <div class="label" style="margin-bottom:12px;">Trades (<span id="histCount">-</span>)</div>
+        <div id="histList"><div class="pair-item"><span class="pair-meta">Nenhum trade.</span></div></div>
+      </div>
+    </section>
+
+    <section id="view-config" class="hidden">
+      <div class="card neutral">
+        <h3 style="margin-top:0;font-size:1rem;">Ajustes</h3>
+        <div class="form-group">
+          <label>Exchange</label>
+          <select id="fExchange"><option value="bybit">Bybit</option></select>
+        </div>
+        <div class="form-group"><label>API Key</label><input type="password" id="fApiKey" placeholder="API Key"></div>
+        <div class="form-group"><label>API Secret</label><input type="password" id="fApiSecret" placeholder="API Secret"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group"><label>SL Hard (%%)</label><input type="number" step="0.1" id="fStopLoss" value="1.5"></div>
+          <div class="form-group"><label>Alav. Base (x)</label><input type="number" id="fLeverage" value="3"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="form-group"><label>Ordem ($)</label><input type="number" id="fSize" value="0.9"></div>
+          <div class="form-group"><label>Timeframe</label>
+            <select id="fTimeframe"><option value="5m">5m</option><option value="15m" selected>15m</option><option value="1h">1h</option></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:4px 0;">
+            <input type="checkbox" id="fSandbox" checked style="width:18px;height:18px;"> <span>Testnet</span>
+          </label>
+        </div>
+        <button class="btn btn-save" onclick="saveConfig()">SALVAR</button>
+        <button class="btn btn-validate" onclick="validateApi()">VALIDAR API</button>
+        <div id="valResult" style="margin-top:10px;font-size:.8rem;"></div>
+        <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
+          <div class="label" style="margin-bottom:10px;">Controle</div>
+          <button id="ctrlBtn" class="btn-action start" onclick="toggleBot()">INICIAR</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('dashboard', this)"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</button>
+    <button class="nav-btn" onclick="switchTab('market', this)"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Mercado</button>
+    <button class="nav-btn" onclick="switchTab('chart', this)"><svg viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>Grafico</button>
+    <button class="nav-btn" onclick="switchTab('history', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Historico</button>
+    <button class="nav-btn" onclick="switchTab('config', this)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Ajustes</button>
+  </nav>
+</div>
+
+<script>
+  let isRunning=false;
+  function fmtMoney(v){v=parseFloat(v)||0;if(Math.abs(v)>=1000)return v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});if(Math.abs(v)>=1)return v.toLocaleString('pt-BR',{minimumFractionDigits:3,maximumFractionDigits:5});return v.toLocaleString('pt-BR',{minimumFractionDigits:5,maximumFractionDigits:5});}
+  function fmt5(v){return(v>=0?'+':'')+(parseFloat(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:5,maximumFractionDigits:5});}
+  function fmt2(v){return(parseFloat(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+  function switchTab(tab,btn){document.querySelectorAll('main>section').forEach(s=>s.classList.add('hidden'));document.getElementById('view-'+tab).classList.remove('hidden');document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));if(btn&&btn.classList.contains('nav-btn'))btn.classList.add('active');if(tab==='chart')updateTradingView();if(tab==='history')loadHistory();if(tab==='market')loadMarket();}
+
+  function updateTradingView(){const sym=window.lastChartSymbol||'BTCUSDT.P';document.getElementById('tvFrame').src='https://www.tradingview.com/widgetembed/?frameElementId=tvFrame&symbol=BYBIT:'+sym+'&interval=15&theme=dark&style=1&locale=pt&hide_top_toolbar=false&hide_legend=false&allow_symbol_change=true&save_image=false&details=false&studies=[]';}
+
+  async function toggleBot(){
+    const btn=document.getElementById('ctrlBtn');
+    btn.disabled=true;
+    if(!isRunning){
+      btn.innerHTML='<span class="spinner"></span>INICIANDO...';
+      btn.className='btn-action start';
+      try{
+        const r=await fetch('/api/bot/start',{method:'POST'});
+        const j=await r.json();
+        if(j.status==='erro_api'||j.status==='erro'){
+          alert(j.message||'Erro ao iniciar.');
+          btn.innerText='INICIAR';btn.className='btn-action start';isRunning=false;
+        }else{
+          btn.innerText='PARAR';btn.className='btn-action stop';isRunning=true;
+          switchTab('dashboard',document.querySelector('.nav-btn'));
+        }
+      }catch(e){
+        alert('Erro de rede ao iniciar.');
+        btn.innerText='INICIAR';btn.className='btn-action start';isRunning=false;
+      }
+    }else{
+      btn.innerHTML='<span class="spinner"></span>PARANDO...';
+      btn.className='btn-action stop';
+      try{
+        await fetch('/api/bot/stop',{method:'POST'});
+        btn.innerText='INICIAR';btn.className='btn-action start';isRunning=false;
+        document.getElementById('heroCard').classList.add('hidden');
+        document.getElementById('txtSignalDash').innerText='-';
+        document.getElementById('txtLatency').innerText='-';
+      }catch(e){
+        btn.innerText='PARAR';btn.className='btn-action stop';isRunning=true;
+      }
+    }
+    btn.disabled=false;
+  }
+
+  async function saveConfig(){const payload={api_key:document.getElementById('fApiKey').value.trim(),api_secret:document.getElementById('fApiSecret').value.trim(),stop_loss_pct:parseFloat(document.getElementById('fStopLoss').value),leverage:parseInt(document.getElementById('fLeverage').value),timeframe:document.getElementById('fTimeframe').value,exchange:document.getElementById('fExchange').value,order_size_usdt:parseFloat(document.getElementById('fSize').value),sandbox:document.getElementById('fSandbox').checked};const r=await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const j=await r.json();alert(j.status==='saved'?'Salvo!':'Erro.');}
+  async function validateApi(){const r=await fetch('/api/validate',{method:'POST'});const j=await r.json();const el=document.getElementById('valResult');if(j.valid){el.innerText=`✅ ${j.message}`;el.style.color='var(--accent)';}else{el.innerText=`❌ ${j.message}`;el.style.color='var(--danger)';}}
+  async function loadConfig(){const r=await fetch('/api/settings');const c=await r.json();document.getElementById('fApiKey').value=c.api_key||'';document.getElementById('fApiSecret').value=c.api_secret||'';document.getElementById('fStopLoss').value=c.stop_loss_pct??1.5;document.getElementById('fLeverage').value=c.leverage??3;document.getElementById('fTimeframe').value=c.timeframe||'15m';document.getElementById('fExchange').value=c.exchange||'bybit';document.getElementById('fSize').value=c.order_size_usdt??0.9;document.getElementById('fSandbox').checked=c.sandbox??true;}
+
+  async function loadMarket(){const r=await fetch('/api/state');const s=await r.json();document.getElementById('pairCount').innerText=s.active_pairs?s.active_pairs.length:'-';document.getElementById('marketScan').innerText=s.last_scan||'-';const lat=s.scan_latency_ms||0;const latEl=document.getElementById('marketLatency');latEl.innerText=lat+'ms';latEl.className=lat>5000?'latency-bad':lat>1500?'latency-warn':'latency-good';const list=document.getElementById('pairList');if(!s.scan_results||s.scan_results.length===0){list.innerHTML='<div class="pair-item"><span class="pair-meta">Aguardando scan...</span></div>';return;}list.innerHTML=s.scan_results.map(p=>`<div class="pair-item"><div class="pair-info"><div class="pair-name"><span class="pair-side ${p.side==='long'?'side-long':'side-short'}">${p.side.toUpperCase()}</span>${p.symbol}</div><div class="pair-meta">ADX:${p.adx} RSI:${p.rsi} MFI:${p.mfi||'-'} H1:${p.trend_h1}</div></div><div class="pair-score ${p.side==='long'?'positive':'negative'}">${(p.score*100).toFixed(0)}%</div></div>`).join('');}
+
+  async function loadHistory(){const r=await fetch('/api/history');const h=await r.json();document.getElementById('histCount').innerText=h.trades?h.trades.length:'-';document.getElementById('histTotal').innerText=fmt5(h.total_pnl||0);const total=(h.wins||0)+(h.losses||0);document.getElementById('histWinRate').innerText=total>0?((h.wins/total)*100).toFixed(0)+'%':'-';const list=document.getElementById('histList');if(!h.trades||h.trades.length===0){list.innerHTML='<div class="pair-item"><span class="pair-meta">Nenhum trade.</span></div>';return;}list.innerHTML=h.trades.slice().reverse().map(t=>`<div class="pair-item"><div class="pair-info"><div class="pair-name"><span class="pair-side ${t.side==='long'?'side-long':'side-short'}">${t.side.toUpperCase()}</span>${t.symbol}</div><div class="pair-meta">${t.reason} | ${t.time}</div></div><div class="pair-score ${(t.pnl||0)>=0?'positive':'negative'}">${fmt5(t.pnl)}</div></div>`).join('');}
+
+  async function updateDashboard(){const r=await fetch('/api/state');const s=await r.json();document.getElementById('hdrInitial').innerText=fmtMoney(s.session_start_balance||0);document.getElementById('hdrCurrent').innerText=fmtMoney(s.current_balance||0);document.getElementById('txtStatus').innerText=s.status?s.status.toUpperCase():'PARADO';document.getElementById('txtStatus').className='value '+(s.status==='operando'?'positive':s.status==='parado'?'':s.status==='CIRCUIT_BREAKER'?'negative':'');document.getElementById('txtReal').innerText=fmt5(s.realized_pnl||0);document.getElementById('txtReal').className='value '+(s.realized_pnl>=0?'positive':'negative');document.getElementById('txtSignalDash').innerText=s.last_signal||'-';const lat=s.scan_latency_ms||0;const latEl=document.getElementById('txtLatency');latEl.innerText=lat>0?lat+'ms':'-';latEl.className='value '+(lat>5000?'negative':lat>1500?'':'latency-good');if(s.current_position&&s.current_position.symbol){document.getElementById('heroCard').classList.remove('hidden');document.getElementById('hSymbol').innerText=s.current_position.symbol;document.getElementById('hSide').innerText=s.current_position.side.toUpperCase();document.getElementById('hSide').className='badge '+(s.current_position.side==='long'?'positive':'negative');document.getElementById('hUnreal').innerText=fmt5(s.unrealized_pnl||0);document.getElementById('hUnreal').className='stat-val '+(s.unrealized_pnl>=0?'positive':'negative');document.getElementById('hPrice').innerText=fmtMoney(s.current_position.price||0);document.getElementById('hEntry').innerText=fmtMoney(s.current_position.entry||0);const peak=s.peak_pnl_pct||0;const lock=s.lock_stage_pct||0;document.getElementById('hPeak').innerText=fmt2(peak)+'% / '+fmt2(lock)+'%';document.getElementById('hLeverage').innerText='LEV: '+ (s.current_position.leverage||'-') +'x';document.getElementById('hLiq').innerText='LIQ: '+(s.current_position.liqPrice?fmtMoney(s.current_position.liqPrice):'-');window.lastChartSymbol=s.chart_symbol||'BTCUSDT.P';}else{document.getElementById('heroCard').classList.add('hidden');}const logBox=document.getElementById('logBox');const logs=s.logs||[];if(logs.length>0){logBox.innerHTML=logs.slice(-25).map(l=>`<div>${l}</div>`).join('');logBox.scrollTop=logBox.scrollHeight;}isRunning=s.status==='operando'||s.status==='iniciando';const btn=document.getElementById('ctrlBtn');if(isRunning){btn.innerText='PARAR';btn.className='btn-action stop';}else{btn.innerText='INICIAR';btn.className='btn-action start';}}
+
+  loadConfig();
+  updateDashboard();
+  setInterval(updateDashboard, 1500);
+  setInterval(()=>{if(document.getElementById('view-market').classList.contains('hidden')===false)loadMarket();}, 5000);
+</script>
+</body>
+</html>
