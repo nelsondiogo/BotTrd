@@ -1,0 +1,7 @@
+# Ignorar arquivos desnecessários no deploy
+*.pyc
+__pycache__/
+.git/
+.gitignore
+README.md
+ANALISE_*.md
