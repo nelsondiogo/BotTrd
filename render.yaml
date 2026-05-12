@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: BotTrd
-    runtime: docker
-    plan: free
-    dockerfilePath: ./Dockerfile
-    envVars:
-      - key: SECRET_KEY
-        generateValue: true
