@@ -1,2 +1,0 @@
-# BotTrd
-Trading bot
