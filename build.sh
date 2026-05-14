@@ -1,4 +1,0 @@
-#!/bin/bash
-set -e
-pip install --upgrade pip
-pip install flask==3.0.3 aiohttp==3.9.5 gunicorn==23.0.0
