@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: nd-bot-hft-ultra
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: BYBIT_USE_TESTNET
+        value: "true"
