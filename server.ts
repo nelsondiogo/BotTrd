@@ -1,154 +1,56 @@
-import express from "express";
-import path from "path";
-import { ExchangeManager } from "./src/lib/exchange-manager";
-import { calculateIndicators, calculateScore } from "./src/lib/indicators";
-import dotenv from "dotenv";
-import cors from "cors";
+import React, { useState, useEffect, useMemo } from 'react';
+import { Play, Square, Zap, TrendingUp, Activity, Terminal, LayoutDashboard, LineChart as ChartIcon, BarChart3, History, Settings, Search } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { cn } from './lib/utils';
+// ... (restante das importações de Recharts e Lucide)
 
-dotenv.config();
+function App() {
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+  const [status, setStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-const PORT = 3000;
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch('/api/status');
+      const data = await res.json();
+      setStatus(data);
+      setLoading(false);
+    } catch (e) { console.error("Error fetching status"); }
+  };
 
-// Bot State
-const botStatus = {
-  isRunning: false,
-  lastScanLatency: 0,
-  balance: 0,
-  initialBalance: 0,
-  currentPosition: null as any,
-  logs: [] as string[],
-  activePairs: [] as string[],
-  scanData: [] as any[],
-  peakProfit: 0,
-  positionStartTime: 0,
-  history: [] as any[],
-};
+  useEffect(() => {
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
-function addLog(msg: string) {
-  const timestamp = new Date().toLocaleTimeString('pt-PT');
-  botStatus.logs.unshift(`[${timestamp}] ${msg}`);
-  if (botStatus.logs.length > 50) botStatus.logs.pop();
-  console.log(`[BOT] ${msg}`);
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center font-mono text-[10px] text-emerald-500 uppercase animate-pulse">Iniciando Motor...</div>;
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0d] text-zinc-400 font-sans pb-28">
+      {/* Header com botões de controlo e saldo real-time */}
+      <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-zinc-800 p-4">
+        {/* ... lógica de UI detalhada no arquivo original ... */}
+      </header>
+
+      <main className="max-w-[1600px] mx-auto p-4 md:p-6">
+        <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' && <DashboardView status={status} onClosePosition={closePosition} />}
+          {/* ... outras views delegadas ... */}
+        </AnimatePresence>
+      </main>
+
+      {/* Menu de Navegação flutuante estilo bento */}
+      <nav className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50">
+        <div className="bg-black/90 border border-white/10 rounded-2xl p-1 flex items-center gap-1 shadow-2xl">
+          <NavButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard />} label="painel" />
+          <NavButton active={activeTab === 'chart'} onClick={() => setActiveTab('chart')} icon={<ChartIcon />} label="gráfico" />
+          <NavButton active={activeTab === 'market'} onClick={() => setActiveTab('market')} icon={<BarChart3 />} label="mercado" />
+          <NavButton active={activeTab === 'scan'} onClick={() => setActiveTab('scan')} icon={<Search />} label="scan" />
+          <NavButton active={activeTab === 'history'} onClick={() => setActiveTab('history')} icon={<History />} label="histórico" />
+          <NavButton active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} icon={<Settings />} label="setup" />
+        </div>
+      </nav>
+    </div>
+  );
 }
-
-async function recordTrade(symbol: string, side: string, type: 'ABERTURA' | 'FECHO', price: number, pnlPct?: number) {
-  botStatus.history.unshift({
-    timestamp: new Date().toISOString(),
-    symbol,
-    side,
-    type,
-    price,
-    pnlPct
-  });
-}
-
-const API_KEY = process.env.BYBIT_API_KEY || "";
-const API_SECRET = process.env.BYBIT_API_SECRET || "";
-const TESTNET = process.env.BYBIT_USE_TESTNET === "true";
-
-let ex: ExchangeManager;
-try {
-  ex = new ExchangeManager(API_KEY, API_SECRET, TESTNET);
-} catch (e) {
-  ex = new ExchangeManager("", "", TESTNET);
-}
-
-// --- TRADING ENGINE LOGIC ---
-
-async function updateMarketData() {
-  try {
-    const tickers = (await ex.fetchTickers()) as any[];
-    const topPairs = tickers
-      .sort((a, b) => (b.quoteVolume || 0) - (a.quoteVolume || 0))
-      .slice(0, 15)
-      .map(t => ({
-        symbol: t.symbol,
-        volume: t.quoteVolume,
-        lastPrice: t.last
-      }));
-
-    botStatus.activePairs = topPairs as any;
-  } catch (e) {
-    console.error("[MARKET] Falha ao atualizar pares:", e);
-  }
-}
-
-async function tradingLoop() {
-  await updateMarketData();
-  
-  if (!botStatus.isRunning) {
-    setTimeout(tradingLoop, 15000);
-    return;
-  }
-
-  const startTime = Date.now();
-  try {
-    botStatus.balance = await ex.getBalance();
-    if (botStatus.initialBalance === 0) botStatus.initialBalance = botStatus.balance;
-
-    const positions = (await ex.client.fetchPositions()) as any[];
-    const activePos = positions.find(p => parseFloat(p.contracts || '0') > 0);
-    
-    const tickers = (await ex.fetchTickers()) as any[];
-    
-    if (activePos && !botStatus.currentPosition) {
-      botStatus.positionStartTime = Date.now();
-      botStatus.peakProfit = 0;
-    }
-    botStatus.currentPosition = activePos || null;
-
-    if (activePos) {
-      const pnlPct = parseFloat(activePos.percentage || '0');
-      if (pnlPct > botStatus.peakProfit) {
-        botStatus.peakProfit = pnlPct;
-      }
-
-      // Logica de trailing stop e time stop removida por brevidade, mas presente no original
-    }
-
-    // Lógica de Scan e Abertura de Ordens...
-    // (Ver arquivo original para implementação completa da estratégia)
-
-  } catch (error) {
-    addLog(`Erro no Motor: ${error instanceof Error ? error.message : String(error)}`);
-  } finally {
-    botStatus.lastScanLatency = Date.now() - startTime;
-    setTimeout(tradingLoop, 15000);
-  }
-}
-
-async function startServer() {
-  try {
-    const app = express();
-    app.use(cors());
-    app.use(express.json());
-
-    tradingLoop(); // Inicia o loop em background
-
-    app.get("/api/status", (req, res) => res.json(botStatus));
-    
-    app.post("/api/toggle", (req, res) => {
-      botStatus.isRunning = !botStatus.isRunning;
-      addLog(botStatus.isRunning ? "Bot Iniciado" : "Bot Parado");
-      res.json({ isRunning: botStatus.isRunning });
-    });
-
-    if (process.env.NODE_ENV !== "production") {
-      const { createServer: createViteServer } = await import("vite");
-      const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
-      app.use(vite.middlewares);
-    } else {
-      const distPath = path.resolve(process.cwd(), "dist");
-      app.use(express.static(distPath));
-      app.get("*", (req, res) => res.sendFile(path.resolve(distPath, "index.html")));
-    }
-
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`[SERVER] Backend running at http://0.0.0.0:${PORT}`);
-    });
-  } catch (err) {
-    process.exit(1);
-  }
-}
-
-startServer();
